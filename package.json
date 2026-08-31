@@ -1,0 +1,12 @@
+{
+  "name": "amvera-n8n-custom",
+  "version": "1.0.0",
+  "description": "Self-hosted n8n on Amvera with custom config",
+  "main": "node_modules/n8n/bin/n8n",
+  "scripts": {
+    "start": "n8n start"
+  },
+  "dependencies": {
+    "n8n": "^1.xx.x" 
+  }
+}
