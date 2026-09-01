@@ -1,27 +1,32 @@
-# Используем легковесный LTS-образ Node.js внутри официального образа n8n
+# Используем официальный образ n8n как базу
 FROM n8nio/n8n:latest
 
-# Включаем разрешение на установку сторонних пакетов (обязательно)
+# Включаем установку сторонних пакетов
 ENV N8N_COMMUNITY_PACKAGES_ENABLED=true
-# Отключаем телеметрию по желанию
+# Отключаем лишнюю телеметрию
 ENV N8N_DIAGNOSTICS_ENABLED=false
 ENV N8N_VERSION_NOTIFICATIONS_ENABLED=false
 
-# Устанавливаем переменную для пути к данным, чтобы они сохранялись между перезапусками
-ENV N8N_USER_FOLDER=/data
-
-# Копируем файлы package.json для кеширования слоев npm при сборке
-COPY package*.json ./
-
-# Если у вас есть кастомные ноды, устанавливаем их сейчас
-# RUN cd /home/node && npm install git+https://github.com/ваш_ник/репозиторий-с-нодой.git
-
+# Устанавливаем рабочую директорию внутри образа
 WORKDIR /data
+
+# Переключаемся на пользователя node (id 1000), от имени которого работает Amvera
 USER root
 
-# Меняем владельца папки данных на пользователя node (uid 1000), иначе amvera не сможет писать логи
-RUN chown -R node:node /data
+# Копируем только файлы зависимостей в корень WORKDIR (/data) 
+# Это позволяет закешировать слои npm и не пересобирать их при каждом изменении кода
+COPY package*.json ./
 
+# Устанавливаем зависимости ВАШЕГО проекта (включая вашу ноду из GitHub)
+RUN cd /data && \
+    npm install git+https://github.com/allexkoldun/n8n-experiment1.git --unsafe-perm
+
+# Возвращаем права непривилегированного пользователя (требование безопасности Amvera)
 USER node
 
-CMD ["n8n", "start"]
+# Копируем остальной код вашего приложения (если он есть)
+# Если кроме Dockerfile и package.json ничего нет — эту строку можно удалить
+COPY --chown=node:node . .
+
+# Указываем точку входа через абсолютный путь к бинарнику
+CMD ["node", "/home/node/.n8n/node_modules/n8n/bin/n8n", "start"]
